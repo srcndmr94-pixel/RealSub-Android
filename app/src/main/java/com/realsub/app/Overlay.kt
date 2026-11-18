@@ -14,6 +14,8 @@ class Overlay(private val ctx: Context, private val prefs: Prefs) {
 
     private val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var root: View? = null
+    /** Bulunan altyazının ekrandaki üst kenarı (piksel). 0 ise bilinmiyor. */
+    @Volatile var anchorTop = 0
     private var tvTr: TextView? = null
     private var tvEn: TextView? = null
 
@@ -50,9 +52,26 @@ class Overlay(private val ctx: Context, private val prefs: Prefs) {
         }
     }
 
+    /** Çeviri, okunan alanın hemen üstünde dursun; oyunun kendi altyazısını kapatmasın. */
     private fun bottomPx(): Int {
-        val h = ctx.resources.displayMetrics.heightPixels
-        return (h * prefs.bottomPct / 100f).toInt()
+        val dm = ctx.resources.displayMetrics
+        val h = dm.heightPixels
+        if (!prefs.alignAbove) return (h * prefs.bottomPct / 100f).toInt()
+        val top = if (anchorTop > 0) anchorTop.toFloat() else {
+            val land = dm.widthPixels > h
+            h * prefs.regionT(land)
+        }
+        return ((h - top) + h * 0.012f).toInt().coerceIn(0, (h * 0.85f).toInt())
+    }
+
+    /** Alan değişince katmanın yeri de güncellensin. */
+    fun reposition() {
+        val v = root ?: return
+        try {
+            val lp = v.layoutParams as WindowManager.LayoutParams
+            lp.y = bottomPx()
+            wm.updateViewLayout(v, lp)
+        } catch (e: Exception) { }
     }
 
     private fun applyStyle() {
@@ -64,6 +83,7 @@ class Overlay(private val ctx: Context, private val prefs: Prefs) {
     /** Ana iş parçacığından çağrılır. */
     fun set(tr: String, en: String) {
         applyStyle()
+        reposition()
         tvTr?.text = tr
         tvTr?.visibility = if (tr.isEmpty()) View.GONE else View.VISIBLE
         // Çeviri gelmese bile okunan İngilizce gösterilir: nerede takıldığı görünsün.

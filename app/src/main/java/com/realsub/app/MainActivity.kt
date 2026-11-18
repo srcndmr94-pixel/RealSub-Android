@@ -50,6 +50,12 @@ class MainActivity : AppCompatActivity() {
         val sbSize: SeekBar = findViewById(R.id.sbSize)
         val sbBottom: SeekBar = findViewById(R.id.sbBottom)
         val cbEn: CheckBox = findViewById(R.id.cbEn)
+        val cbAuto: CheckBox = findViewById(R.id.cbAuto)
+        val cbAlign: CheckBox = findViewById(R.id.cbAlign)
+        cbAuto.isChecked = prefs.autoRegion
+        cbAlign.isChecked = prefs.alignAbove
+        cbAuto.setOnCheckedChangeListener { _, v -> prefs.autoRegion = v; status() }
+        cbAlign.setOnCheckedChangeListener { _, v -> prefs.alignAbove = v }
 
         etKey.setText(prefs.apiKey)
         etModel.setText(prefs.model)
@@ -109,11 +115,16 @@ class MainActivity : AppCompatActivity() {
         else
             "Ekranın üstüne çizme izni gerekiyor — altyazı bu izinle görünür."
 
-        tvRegion.text = if (prefs.regionSet)
-            "Seçili alan: soldan %${(prefs.regionL * 100).toInt()}, üstten %${(prefs.regionT * 100).toInt()}, " +
-                    "genişlik %${((prefs.regionR - prefs.regionL) * 100).toInt()}"
-        else
-            "Alan seçilmedi — varsayılan olarak ekranın alt şeridi okunur."
+        tvRegion.text = if (prefs.autoRegion)
+            "Program ekranın alt yarısını tarar, altyazıyı kendisi bulur. Elle alan seçmen gerekmez."
+        else {
+            val land = resources.displayMetrics.widthPixels > resources.displayMetrics.heightPixels
+            if (prefs.regionSet(land))
+                "Elle seçili alan (" + (if (land) "yatay" else "dikey") + "): üstten %" +
+                        (prefs.regionT(land) * 100).toInt() + ", genişlik %" +
+                        ((prefs.regionR(land) - prefs.regionL(land)) * 100).toInt()
+            else "Elle kip açık ama alan seçilmedi — aşağıdaki düğmeyle seç."
+        }
     }
 
     private fun canOverlay(): Boolean =

@@ -76,6 +76,8 @@ class CaptureService : Service() {
     private var busy = false
     private var failUntil = 0L
     private var lastToastAt = 0L
+    private var cropTop = 0
+    private var missCount = 0
 
     override fun onBind(i: Intent?): IBinder? = null
 
@@ -157,7 +159,7 @@ class CaptureService : Service() {
     private val loop = object : Runnable {
         override fun run() {
             try { tick() } catch (e: Exception) { }
-            workHandler?.postDelayed(this, 650)
+            workHandler?.postDelayed(this, 450)
         }
     }
 
@@ -174,7 +176,9 @@ class CaptureService : Service() {
         val prev = lastSig
         if (prev != null) {
             val d = diff(sig, prev)
-            if (d > 8) { changed = true; quiet = 0; changes++ } else if (changed) quiet++
+            // Otomatik kipte geniş alan taranır; oyundaki ışık/patlama boşuna tetiklemesin.
+            val esik = if (prefs.autoRegion) 14 else 8
+            if (d > esik) { changed = true; quiet = 0; changes++ } else if (changed) quiet++
         }
         lastSig = sig
 
@@ -195,10 +199,19 @@ class CaptureService : Service() {
 
         busy = true
         try {
-            val text = Ocr.read(crop)
+            val found = Ocr.detect(crop, prefs.autoRegion)
             reads++
-            if (text.isEmpty()) { lastOcr = "(okunamadı)"; return }
+            if (found == null) {
+                lastOcr = "(altyazı bulunamadı)"
+                missCount++
+                if (missCount >= 4) { lastText = ""; post("", "") }
+                return
+            }
+            missCount = 0
+            val text = found.text
             lastOcr = text
+            // Bulunan altyazının ekrandaki yeri: çeviri bunun üstüne yerleşir.
+            overlay?.anchorTop = cropTop + found.top
             if (!force && Ocr.similar(text, lastText) > 0.85f) return
             lastText = text
             val tr = translate(text)
@@ -278,10 +291,14 @@ class CaptureService : Service() {
         val full = Bitmap.createBitmap(img.width + rowPad / pixelStride, img.height, Bitmap.Config.ARGB_8888)
         full.copyPixelsFromBuffer(plane.buffer)
 
-        val l = (sw * prefs.regionL).toInt().coerceIn(0, sw - 2)
-        val t = (sh * prefs.regionT).toInt().coerceIn(0, sh - 2)
-        val r = (sw * prefs.regionR).toInt().coerceIn(l + 2, sw)
-        val b = (sh * prefs.regionB).toInt().coerceIn(t + 2, sh)
+        val land = sw > sh
+        val auto = prefs.autoRegion
+        val l = if (auto) 0 else (sw * prefs.regionL(land)).toInt().coerceIn(0, sw - 2)
+        val t = if (auto) (sh * prefs.scanFrom).toInt().coerceIn(0, sh - 2)
+                else (sh * prefs.regionT(land)).toInt().coerceIn(0, sh - 2)
+        val r = if (auto) sw else (sw * prefs.regionR(land)).toInt().coerceIn(l + 2, sw)
+        val b = if (auto) sh else (sh * prefs.regionB(land)).toInt().coerceIn(t + 2, sh)
+        cropTop = t
         return try {
             val out = Bitmap.createBitmap(full, l, t, r - l, b - t)
             if (out != full) full.recycle()

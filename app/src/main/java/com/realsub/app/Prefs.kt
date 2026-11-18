@@ -31,32 +31,41 @@ class Prefs(ctx: Context) {
         set(v) = p.edit().putInt("bottom", v.coerceIn(0, 60)).apply()
 
     var showEn: Boolean
-        get() = p.getBoolean("showEn", true)
+        get() = p.getBoolean("showEn", false)
         set(v) = p.edit().putBoolean("showEn", v).apply()
 
-    /** Altyazı alanı, ekranın oranı olarak (0..1) */
-    var regionL: Float
-        get() = p.getFloat("rl", 0.05f)
-        set(v) = p.edit().putFloat("rl", v).apply()
-    var regionT: Float
-        get() = p.getFloat("rt", 0.72f)
-        set(v) = p.edit().putFloat("rt", v).apply()
-    var regionR: Float
-        get() = p.getFloat("rr", 0.95f)
-        set(v) = p.edit().putFloat("rr", v).apply()
-    var regionB: Float
-        get() = p.getFloat("rb", 0.95f)
-        set(v) = p.edit().putFloat("rb", v).apply()
+    /**
+     * Altyazı alanı, ekranın oranı olarak (0..1).
+     * Dikey ve yatay için ayrı tutulur: telefon yatayken altyazı başka yerde çıkar.
+     */
+    private fun k(land: Boolean, n: String) = (if (land) "L" else "P") + n
 
-    var regionSet: Boolean
-        get() = p.getBoolean("regionSet", false)
-        set(v) = p.edit().putBoolean("regionSet", v).apply()
+    fun regionL(land: Boolean): Float = p.getFloat(k(land, "rl"), if (land) 0.10f else 0.05f)
+    fun regionT(land: Boolean): Float = p.getFloat(k(land, "rt"), if (land) 0.76f else 0.72f)
+    fun regionR(land: Boolean): Float = p.getFloat(k(land, "rr"), if (land) 0.90f else 0.95f)
+    fun regionB(land: Boolean): Float = p.getFloat(k(land, "rb"), if (land) 0.97f else 0.95f)
+    fun regionSet(land: Boolean): Boolean = p.getBoolean(k(land, "set"), false)
 
-    fun setRegion(l: Float, t: Float, r: Float, b: Float) {
+    /** Altyazıyı program kendisi bulsun (elle alan seçmeye gerek kalmaz). */
+    var autoRegion: Boolean
+        get() = p.getBoolean("autoRegion", true)
+        set(v) = p.edit().putBoolean("autoRegion", v).apply()
+
+    /** Otomatik kipte ekranın nereden aşağısı taranır (0.45 = alt %55). */
+    var scanFrom: Float
+        get() = p.getFloat("scanFrom", 0.45f)
+        set(v) = p.edit().putFloat("scanFrom", v.coerceIn(0f, 0.8f)).apply()
+
+    /** Çeviriyi, okunan alanın hemen üstüne yerleştir (İngilizcenin üstünde dursun). */
+    var alignAbove: Boolean
+        get() = p.getBoolean("alignAbove", true)
+        set(v) = p.edit().putBoolean("alignAbove", v).apply()
+
+    fun setRegion(land: Boolean, l: Float, t: Float, r: Float, b: Float) {
         p.edit()
-            .putFloat("rl", l).putFloat("rt", t)
-            .putFloat("rr", r).putFloat("rb", b)
-            .putBoolean("regionSet", true)
+            .putFloat(k(land, "rl"), l).putFloat(k(land, "rt"), t)
+            .putFloat(k(land, "rr"), r).putFloat(k(land, "rb"), b)
+            .putBoolean(k(land, "set"), true)
             .apply()
     }
 }

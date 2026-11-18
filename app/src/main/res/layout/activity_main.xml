@@ -128,19 +128,34 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="3. Altyazı alanı"
+                android:text="3. Altyazı yakalama"
                 android:textColor="@color/txt"
                 android:textSize="16sp"
                 android:textStyle="bold" />
+
+            <CheckBox
+                android:id="@+id/cbAuto"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Altyazıyı kendisi bulsun (önerilen)"
+                android:textColor="@color/txt" />
 
             <TextView
                 android:id="@+id/tvRegion"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
                 android:text="—"
                 android:textColor="@color/muted"
                 android:textSize="13sp" />
+
+            <CheckBox
+                android:id="@+id/cbAlign"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Çeviriyi altyazının üstüne yerleştir"
+                android:textColor="@color/txt" />
 
             <Button
                 android:id="@+id/btnRegion"
@@ -148,7 +163,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:background="@drawable/btn_grey"
-                android:text="Alanı seç"
+                android:text="Alanı elle seç"
                 android:textAllCaps="false"
                 android:textColor="@color/txt" />
         </LinearLayout>

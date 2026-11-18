@@ -40,9 +40,10 @@ class RegionActivity : Activity() {
         init {
             setLayerType(LAYER_TYPE_SOFTWARE, null)
             post {
-                r = RectF(width * prefs.regionL, height * prefs.regionT,
-                    width * prefs.regionR, height * prefs.regionB)
-                drawn = prefs.regionSet
+                val land = width > height
+                r = RectF(width * prefs.regionL(land), height * prefs.regionT(land),
+                    width * prefs.regionR(land), height * prefs.regionB(land))
+                drawn = prefs.regionSet(land)
                 invalidate()
             }
         }
@@ -54,7 +55,10 @@ class RegionActivity : Activity() {
                 canvas.drawRect(r, border)
             }
             canvas.drawText("Altyazının çıktığı yeri parmağınla çerçevele", 40f, 120f, label)
-            canvas.drawText("Bitince parmağını kaldır; alan kaydedilir.", 40f, 170f, hint)
+            canvas.drawText(
+                if (width > height) "Yatay alan seçiliyor — oyunu yatay oynuyorsan doğru yerdesin."
+                else "Dikey alan seçiliyor — yatay izleyeceksen telefonu çevirip tekrar seç.",
+                40f, 170f, hint)
         }
 
         override fun onTouchEvent(e: MotionEvent): Boolean {
@@ -71,13 +75,17 @@ class RegionActivity : Activity() {
                 }
                 MotionEvent.ACTION_UP -> {
                     if (r.width() > 40 && r.height() > 25) {
+                        val land = width > height
                         prefs.setRegion(
+                            land,
                             (r.left / width).coerceIn(0f, 1f),
                             (r.top / height).coerceIn(0f, 1f),
                             (r.right / width).coerceIn(0f, 1f),
                             (r.bottom / height).coerceIn(0f, 1f)
                         )
-                        Toast.makeText(context, "Alan kaydedildi", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context,
+                            if (land) "Yatay alan kaydedildi" else "Dikey alan kaydedildi",
+                            Toast.LENGTH_SHORT).show()
                         finish()
                     } else {
                         Toast.makeText(context, "Çok küçük — tekrar dene", Toast.LENGTH_SHORT).show()

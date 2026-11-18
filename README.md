@@ -8,8 +8,10 @@ Hangi uygulamayı kullandığın fark etmez: YouTube, oyun, yerel oynatıcı —
 1. Ekran kaydı izniyle ekranın görüntüsü alınır (hiçbir yere gönderilmez, kayıt tutulmaz).
 2. Yalnızca senin seçtiğin **altyazı alanı** kesilip okunur.
 3. Okuma cihazın içinde yapılır (ML Kit) — internet gerekmez, ücretsizdir.
+   Altyazının ekranda nerede olduğunu program kendisi bulur: alt yarıdaki metin blokları çıkarılır,
+   oynatıcı arayüzü (süre, "Diğer videolar", öneri kartları) elenir, ortaya yakın duran blok altyazı sayılır.
 4. Metin değiştiğinde, yalnızca o zaman çeviri istenir. Sahnedeki hareket istek tetiklemez.
-5. Çeviri, ekranın üstünde duran katmanda görünür: Türkçe üstte, istersen İngilizce altta.
+5. Çeviri, bulunan altyazının **hemen üstünde** gösterilir; oyunun kendi altyazısını kapatmaz.
 
 ## Kurulum
 
@@ -19,7 +21,8 @@ Hangi uygulamayı kullandığın fark etmez: YouTube, oyun, yerel oynatıcı —
 4. Uygulamayı aç:
    - **Ekranın üstüne çizme iznini ver** — zorunlu.
    - **API anahtarı** — Google AI Studio'dan ücretsiz alınır. Boş bırakırsan ücretsiz motor kullanılır.
-   - **Alanı seç** — altyazının çıktığı yeri parmağınla çerçevele.
+   - **Altyazı yakalama** — varsayılan olarak otomatik; elle alan seçmen gerekmez.
+     Program bulamazsa bu kutunun işaretini kaldırıp alanı elle seçebilirsin.
    - **Başlat** — ekran kaydı iznini onayla, uygulamadan çık, izlemeye başla.
 5. Durdurmak için bildirime dokun.
 
