@@ -131,6 +131,7 @@ class CaptureService : Service() {
 
         resetStats()
         band = -1f; bandMiss = 0; lastCropH = 0
+        Ocr.forgetDisplayed()
         startCapture()
         running = true
         return START_STICKY
@@ -235,6 +236,9 @@ class CaptureService : Service() {
                 translations++
                 lastTr = tr
                 prevText = text
+                // Kendi yazdığımız metin ekranda; sonraki karede tekrar okunup
+                // yeniden çevrilmesin diye kaydediliyor.
+                Ocr.markDisplayed(tr)
                 post(tr, text)
             } else {
                 // Çeviri olmasa bile okunanı göster: nerede takıldığı anlaşılsın.
