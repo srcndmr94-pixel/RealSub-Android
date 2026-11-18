@@ -34,9 +34,26 @@ class CaptureService : Service() {
         const val ACTION_STOP = "stop"
         const val EXTRA_CODE = "code"
         const val EXTRA_DATA = "data"
+        const val ACTION_TEST = "test"
         private const val CHANNEL = "realsub"
         private const val NOTIF_ID = 41
         @Volatile var running = false
+
+        /** Durum ekranı için sayaçlar — aynı süreçte olduğumuz için doğrudan okunur. */
+        @Volatile var frames = 0
+        @Volatile var changes = 0
+        @Volatile var reads = 0
+        @Volatile var translations = 0
+        @Volatile var lastOcr = ""
+        @Volatile var lastTr = ""
+        @Volatile var lastError = ""
+        @Volatile var lastBright = 0
+        @Volatile var forceOnce = false
+
+        fun resetStats() {
+            frames = 0; changes = 0; reads = 0; translations = 0
+            lastOcr = ""; lastTr = ""; lastError = ""; lastBright = 0
+        }
     }
 
     private var projection: MediaProjection? = null
@@ -67,6 +84,10 @@ class CaptureService : Service() {
         if (intent?.action == ACTION_STOP) {
             stopEverything()
             return START_NOT_STICKY
+        }
+        if (intent?.action == ACTION_TEST) {
+            forceOnce = true
+            return START_STICKY
         }
 
         startForeground(NOTIF_ID, buildNotification())
@@ -101,6 +122,7 @@ class CaptureService : Service() {
             }
         }, main)
 
+        resetStats()
         startCapture()
         running = true
         return START_STICKY
@@ -112,10 +134,10 @@ class CaptureService : Service() {
         val dm = DisplayMetrics()
         @Suppress("DEPRECATION") wm.defaultDisplay.getRealMetrics(dm)
 
-        // Yarı çözünürlük yeter; hem hızlı hem bellek dostu.
-        val scale = if (dm.widthPixels > 1400) 2 else 1
-        sw = dm.widthPixels / scale
-        sh = dm.heightPixels / scale
+        // Tam çözünürlük: altyazı yazısı küçük olduğu için okuma doğruluğu buna bağlı.
+        val scale = 1
+        sw = dm.widthPixels
+        sh = dm.heightPixels
 
         reader = ImageReader.newInstance(sw, sh, PixelFormat.RGBA_8888, 2)
         display = projection?.createVirtualDisplay(
@@ -144,16 +166,21 @@ class CaptureService : Service() {
         val crop: Bitmap? = try { cropRegion(img) } finally { img.close() }
         if (crop == null) return
 
+        frames++
         val sig = signature(crop)
-        val blank = sig[sig.size - 1] < (sig.size - 1) * 0.015
+        lastBright = sig[sig.size - 1]
+        val blank = lastBright < (sig.size - 1) * 0.0015   // yazı yok
         val prev = lastSig
         if (prev != null) {
             val d = diff(sig, prev)
-            if (d > 8) { changed = true; quiet = 0 } else if (changed) quiet++
+            if (d > 8) { changed = true; quiet = 0; changes++ } else if (changed) quiet++
         }
         lastSig = sig
 
-        if (blank) {
+        val force = forceOnce
+        if (force) forceOnce = false
+
+        if (blank && !force) {
             if (changed && quiet >= 1) {
                 changed = false
                 lastText = ""
@@ -162,18 +189,26 @@ class CaptureService : Service() {
             crop.recycle()
             return
         }
-        if (!changed || quiet < 1) { crop.recycle(); return }
+        if (!force && (!changed || quiet < 1)) { crop.recycle(); return }
         changed = false
 
         busy = true
         try {
             val text = Ocr.read(crop)
-            if (text.isEmpty() || Ocr.similar(text, lastText) > 0.85f) return
+            reads++
+            if (text.isEmpty()) { lastOcr = "(okunamadı)"; return }
+            lastOcr = text
+            if (!force && Ocr.similar(text, lastText) > 0.85f) return
             lastText = text
             val tr = translate(text)
             if (tr.isNotEmpty()) {
+                translations++
+                lastTr = tr
                 prevText = text
                 post(tr, text)
+            } else {
+                // Çeviri olmasa bile okunanı göster: nerede takıldığı anlaşılsın.
+                post("", text)
             }
         } finally {
             busy = false
@@ -188,6 +223,7 @@ class CaptureService : Service() {
         } catch (e: Exception) {
             val m = e.message ?: ""
             failUntil = System.currentTimeMillis() + if (m.contains("429")) 6000 else 2500
+            lastError = m.take(160)
             main.post { toast("Çeviri hatası: " + m.take(90)) }
             ""
         }
@@ -222,8 +258,8 @@ class CaptureService : Service() {
 
     /** Küçültülmüş parlaklık haritası; son hücre parlak piksel sayısını tutar. */
     private fun signature(bmp: Bitmap): IntArray {
-        val w = 48
-        val h = 14
+        val w = 96
+        val h = 26
         val small = Bitmap.createScaledBitmap(bmp, w, h, true)
         val px = IntArray(w * h)
         small.getPixels(px, 0, w, 0, 0, w, h)

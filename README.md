@@ -23,6 +23,18 @@ Hangi uygulamayı kullandığın fark etmez: YouTube, oyun, yerel oynatıcı —
    - **Başlat** — ekran kaydı iznini onayla, uygulamadan çık, izlemeye başla.
 5. Durdurmak için bildirime dokun.
 
+## Bir şey görünmüyorsa
+
+Uygulamadaki **5. Durum** bölümü akışın neresinde takıldığını söyler. Çalışırken uygulamaya dön,
+**Tek kare oku** → **Durumu yenile**:
+
+| Gördüğün | Anlamı |
+|---|---|
+| Alınan kare 0 | Ekran kaydı başlamamış; Başlat'a tekrar bas |
+| Parlak nokta çok düşük | Seçili alan yanlış yerde ya da altyazı o anda ekranda değil |
+| Okuma denemesi var, "son okunan: (okunamadı)" | Alan doğru ama yazı küçük/bulanık; alanı daha dar seç |
+| Son okunan dolu, son çeviri boş | Okuma çalışıyor, çeviri takılıyor — "son hata" satırına bak |
+
 ## Sertlik seviyeleri
 
 | Seviye | Örnek: *"Fuck you, bitch."* |

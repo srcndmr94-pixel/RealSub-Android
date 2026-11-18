@@ -87,6 +87,8 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<Button>(R.id.btnStart).setOnClickListener { start() }
         findViewById<Button>(R.id.btnStop).setOnClickListener { stop() }
+        findViewById<Button>(R.id.btnTest).setOnClickListener { testOnce() }
+        findViewById<Button>(R.id.btnStatus).setOnClickListener { showStatus() }
 
         askNotif()
     }
@@ -158,6 +160,29 @@ class MainActivity : AppCompatActivity() {
 
         toast("Başladı — uygulamadan çıkıp izlemeye başla.")
         moveTaskToBack(true)
+    }
+
+    /** Çalışırken tek kare okutur; değişim beklemeden okur. */
+    private fun testOnce() {
+        if (!CaptureService.running) { toast("Önce Başlat'a bas."); return }
+        startService(Intent(this, CaptureService::class.java).setAction(CaptureService.ACTION_TEST))
+        toast("Okunuyor — 2 saniye sonra Durumu yenile.")
+    }
+
+    /** Akışın neresinde takıldığını gösterir. */
+    private fun showStatus() {
+        val tv: TextView = findViewById(R.id.tvStatus)
+        if (!CaptureService.running) { tv.text = "Çalışmıyor. Başlat'a bas."; return }
+        val b = StringBuilder()
+        b.append("Alınan kare: ").append(CaptureService.frames).append("\n")
+        b.append("Algılanan değişim: ").append(CaptureService.changes).append("\n")
+        b.append("Seçili alandaki parlak nokta: ").append(CaptureService.lastBright).append("\n")
+        b.append("Okuma denemesi: ").append(CaptureService.reads).append("\n")
+        b.append("Çeviri: ").append(CaptureService.translations).append("\n\n")
+        b.append("Son okunan: ").append(CaptureService.lastOcr.ifEmpty { "—" }).append("\n")
+        b.append("Son çeviri: ").append(CaptureService.lastTr.ifEmpty { "—" })
+        if (CaptureService.lastError.isNotEmpty()) b.append("\n\nSon hata: ").append(CaptureService.lastError)
+        tv.text = b.toString()
     }
 
     private fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_SHORT).show()

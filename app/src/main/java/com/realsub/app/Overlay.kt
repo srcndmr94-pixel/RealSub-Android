@@ -66,7 +66,8 @@ class Overlay(private val ctx: Context, private val prefs: Prefs) {
         applyStyle()
         tvTr?.text = tr
         tvTr?.visibility = if (tr.isEmpty()) View.GONE else View.VISIBLE
-        val showEn = prefs.showEn && en.isNotEmpty() && tr.isNotEmpty()
+        // Çeviri gelmese bile okunan İngilizce gösterilir: nerede takıldığı görünsün.
+        val showEn = prefs.showEn && en.isNotEmpty()
         tvEn?.text = if (showEn) en else ""
         tvEn?.visibility = if (showEn) View.VISIBLE else View.GONE
     }
