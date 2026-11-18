@@ -75,6 +75,7 @@ class CaptureService : Service() {
     private var prevText = ""
     private var busy = false
     private var failUntil = 0L
+    private var lastToastAt = 0L
 
     override fun onBind(i: Intent?): IBinder? = null
 
@@ -216,17 +217,52 @@ class CaptureService : Service() {
         }
     }
 
+    /**
+     * Önce yapay zekâ denenir. Model meşgulse bir kez daha denenir;
+     * yine olmazsa ücretsiz motora düşülür ki ekran boş kalmasın.
+     */
     private fun translate(text: String): String {
+        val key = prefs.apiKey
+        if (key.isNotEmpty()) {
+            var attempt = 0
+            while (attempt < 2) {
+                try {
+                    val r = Translator.ai(text, prevText, prefs)
+                    if (r.isNotEmpty()) { lastError = ""; return r }
+                    break
+                } catch (e: Exception) {
+                    val m = e.message ?: ""
+                    lastError = m.take(160)
+                    val busyModel = m.contains("high demand", true) || m.contains("overload", true) ||
+                            m.contains("503") || m.contains("UNAVAILABLE", true)
+                    val quota = m.contains("429") || m.contains("quota", true) ||
+                            m.contains("RESOURCE_EXHAUSTED", true)
+                    if (busyModel && attempt == 0) {
+                        attempt++
+                        try { Thread.sleep(800) } catch (ie: InterruptedException) { }
+                        continue
+                    }
+                    failUntil = System.currentTimeMillis() + if (quota) 10000 else 1500
+                    noteError(if (quota) "Kota doldu, bekleniyor" else "Model meşgul, ücretsiz motora düşüldü")
+                    break
+                }
+            }
+        }
         return try {
-            if (prefs.apiKey.isNotEmpty()) Translator.ai(text, prevText, prefs)
-            else Translator.free(text, prefs.hard)
-        } catch (e: Exception) {
-            val m = e.message ?: ""
-            failUntil = System.currentTimeMillis() + if (m.contains("429")) 6000 else 2500
-            lastError = m.take(160)
-            main.post { toast("Çeviri hatası: " + m.take(90)) }
+            Translator.free(text, prefs.hard)
+        } catch (e2: Exception) {
+            lastError = (e2.message ?: "çeviri yok").take(160)
+            noteError("Çeviri yapılamadı")
             ""
         }
+    }
+
+    /** Uyarıyı en çok 12 saniyede bir gösterir; ekran uyarıya boğulmasın. */
+    private fun noteError(msg: String) {
+        val now = System.currentTimeMillis()
+        if (now - lastToastAt < 12000) return
+        lastToastAt = now
+        main.post { toast(msg) }
     }
 
     private fun post(tr: String, en: String) {
