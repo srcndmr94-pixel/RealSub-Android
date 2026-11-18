@@ -21,22 +21,39 @@ jobs:
         with:
           gradle-version: "8.7"
 
+      - name: Kaynagi hazirla
+        id: src
+        run: |
+          set -e
+          # Depodaki en yuksek surumlu zip secilir; yoksa depo kokunden derlenir.
+          ZIP=""
+          for f in *.zip; do
+            [ -e "$f" ] || continue
+            case "$(echo "$f" | tr 'A-Z' 'a-z')" in *realsub*) ;; *) continue ;; esac
+            v=$(echo "$f" | grep -oE '[0-9]+(\.[0-9]+)*' | sort -V | tail -n 1)
+            echo "${v:-0}|$f"
+          done | sort -V | tail -n 1 > /tmp/pick || true
+          ZIP=$(cut -d'|' -f2 /tmp/pick 2>/dev/null || true)
+          if [ -n "$ZIP" ] && [ -f "$ZIP" ]; then
+            echo "Kaynak zip: $ZIP"
+            rm -rf kaynak && mkdir kaynak
+            unzip -q "$ZIP" -d kaynak
+            DIR=$(find kaynak -maxdepth 3 -name settings.gradle.kts -printf '%h\n' | head -n 1)
+            if [ -z "$DIR" ]; then echo "Zip icinde proje bulunamadi"; exit 1; fi
+            echo "Proje klasoru: $DIR"
+            echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+          else
+            echo "Zip yok; depo kokunden derlenecek."
+            echo "dir=." >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Derle
+        working-directory: ${{ steps.src.outputs.dir }}
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 
       - name: APK'yi yukle
         uses: actions/upload-artifact@v4
         with:
           name: RealSub-APK-${{ github.run_number }}
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ steps.src.outputs.dir }}/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-
-      - name: Hata kaydi
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: hata-kaydi-${{ github.run_number }}
-          path: |
-            app/build/reports/
-            build/reports/
-          if-no-files-found: ignore
