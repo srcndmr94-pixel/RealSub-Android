@@ -5,12 +5,36 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   apk:
     name: Telefon APK
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Imza anahtari
+        run: |
+          set -e
+          # Sabit imza olmazsa her derleme baska bir anahtarla imzalanir ve
+          # yeni APK eskisinin ustune kurulmaz. Anahtar bir kez uretilip
+          # depoya yazilir, sonraki derlemeler ayni anahtari kullanir.
+          if [ ! -f realsub.keystore ]; then
+            keytool -genkeypair -noprompt \
+              -keystore realsub.keystore -storepass realsub -keypass realsub \
+              -alias realsub -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=RealSub, O=RealSub, L=Istanbul, C=TR"
+            git config user.name "github-actions"
+            git config user.email "actions@github.com"
+            git add realsub.keystore
+            git commit -m "Imza anahtari olusturuldu"
+            git push
+            echo "Imza anahtari uretildi ve depoya yazildi."
+          else
+            echo "Imza anahtari zaten var."
+          fi
 
       - uses: actions/setup-java@v4
         with:
@@ -49,6 +73,8 @@ jobs:
 
       - name: Derle
         working-directory: ${{ steps.src.outputs.dir }}
+        env:
+          REALSUB_KEYSTORE: ${{ github.workspace }}/realsub.keystore
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 
       - name: APK'yi yukle
