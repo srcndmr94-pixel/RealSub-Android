@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.RealSub" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:textColor">@color/txt</item>
+        <item name="android:colorAccent">@color/acc</item>
+    </style>
+
+    <!-- Alan seçme ekranı: saydam, çerçevesiz. Çerçeve yok ki altındaki ekran görünsün. -->
+    <style name="Theme.RealSub.Transparent" parent="android:Theme.Translucent.NoTitleBar.Fullscreen" />
+</resources>
