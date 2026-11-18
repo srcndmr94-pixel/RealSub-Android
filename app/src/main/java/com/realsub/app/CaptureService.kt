@@ -78,6 +78,10 @@ class CaptureService : Service() {
     private var lastToastAt = 0L
     private var cropTop = 0
     private var missCount = 0
+    /** Altyazının bulunduğu şerit (kırpılmış görüntüdeki dikey orta nokta). */
+    private var band = -1f
+    private var bandMiss = 0
+    private var lastCropH = 0
 
     override fun onBind(i: Intent?): IBinder? = null
 
@@ -126,6 +130,7 @@ class CaptureService : Service() {
         }, main)
 
         resetStats()
+        band = -1f; bandMiss = 0; lastCropH = 0
         startCapture()
         running = true
         return START_STICKY
@@ -199,7 +204,14 @@ class CaptureService : Service() {
 
         busy = true
         try {
-            val found = Ocr.detect(crop, prefs.autoRegion)
+            if (crop.height != lastCropH) { lastCropH = crop.height; band = -1f }
+            val tol = crop.height * 0.13f
+            var found = Ocr.detect(crop, prefs.autoRegion, band, tol)
+            if (found == null && band >= 0f) {
+                // Şeritte bir şey yok: birkaç denemeden sonra şerit serbest bırakılır.
+                bandMiss++
+                if (bandMiss >= 5) { band = -1f; bandMiss = 0; found = Ocr.detect(crop, prefs.autoRegion) }
+            }
             reads++
             if (found == null) {
                 lastOcr = "(altyazı bulunamadı)"
@@ -208,8 +220,12 @@ class CaptureService : Service() {
                 return
             }
             missCount = 0
+            bandMiss = 0
             val text = found.text
             lastOcr = text
+            // Altyazının şeridi öğrenilir; sonraki karelerde arayüz yazıları elenir.
+            band = if (band < 0f) (found.top + found.bottom) / 2f
+                   else band * 0.75f + ((found.top + found.bottom) / 2f) * 0.25f
             // Bulunan altyazının ekrandaki yeri: çeviri bunun üstüne yerleşir.
             overlay?.anchorTop = cropTop + found.top
             if (!force && Ocr.similar(text, lastText) > 0.85f) return

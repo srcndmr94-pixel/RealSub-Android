@@ -53,8 +53,8 @@ class Prefs(ctx: Context) {
 
     /** Otomatik kipte ekranın nereden aşağısı taranır (0.45 = alt %55). */
     var scanFrom: Float
-        get() = p.getFloat("scanFrom", 0.45f)
-        set(v) = p.edit().putFloat("scanFrom", v.coerceIn(0f, 0.8f)).apply()
+        get() = p.getFloat("scanFrom", 0.62f)
+        set(v) = p.edit().putFloat("scanFrom", v.coerceIn(0.2f, 0.85f)).apply()
 
     /** Çeviriyi, okunan alanın hemen üstüne yerleştir (İngilizcenin üstünde dursun). */
     var alignAbove: Boolean

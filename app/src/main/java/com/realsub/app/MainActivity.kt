@@ -55,6 +55,10 @@ class MainActivity : AppCompatActivity() {
         cbAuto.isChecked = prefs.autoRegion
         cbAlign.isChecked = prefs.alignAbove
         cbAuto.setOnCheckedChangeListener { _, v -> prefs.autoRegion = v; status() }
+
+        val sbScan: SeekBar = findViewById(R.id.sbScan)
+        sbScan.progress = ((prefs.scanFrom * 100).toInt() - 20).coerceIn(0, 65)
+        sbScan.setOnSeekBarChangeListener(seek { prefs.scanFrom = (it + 20) / 100f; labels() })
         cbAlign.setOnCheckedChangeListener { _, v -> prefs.alignAbove = v }
 
         etKey.setText(prefs.apiKey)
@@ -107,6 +111,8 @@ class MainActivity : AppCompatActivity() {
     private fun labels() {
         tvSize.text = "Yazı boyutu: ${prefs.textSize}"
         tvBottom.text = "Alttan uzaklık: %${prefs.bottomPct}"
+        findViewById<TextView>(R.id.tvScan).text =
+            "Taramanın başladığı yükseklik: %${(prefs.scanFrom * 100).toInt()}"
     }
 
     private fun status() {

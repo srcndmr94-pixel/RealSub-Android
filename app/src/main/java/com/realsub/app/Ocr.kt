@@ -20,7 +20,7 @@ object Ocr {
      * Arayüz yazıları, süre göstergeleri ve kenarda kalan küçük yazılar elenir.
      * Arka plan iş parçacığından çağrılır; sonucu bekler.
      */
-    fun detect(bmp: Bitmap, auto: Boolean): Found? {
+    fun detect(bmp: Bitmap, auto: Boolean, band: Float = -1f, bandTol: Float = 0f): Found? {
         val latch = CountDownLatch(1)
         var lines: List<Pair<String, android.graphics.Rect>> = emptyList()
         try {
@@ -65,9 +65,17 @@ object Ocr {
         val central = ok.filter { (_, b) ->
             Math.abs((b.left + b.right) / 2f - cx) < w * 0.42f
         }
-        val pool = if (central.isNotEmpty()) central else ok
+        var pool = if (central.isNotEmpty()) central else ok
 
-        // 3) en alttaki satır çekirdek alınır, yakınındakiler onunla birleştirilir
+        // 3) altyazının bulunduğu şerit biliniyorsa dışındakilere bakılmaz;
+        //    oynatıcı arayüzü başka yükseklikte çıktığı için böylece elenir
+        if (band >= 0f) {
+            val inBand = pool.filter { (_, b) -> Math.abs((b.top + b.bottom) / 2f - band) <= bandTol }
+            if (inBand.isEmpty()) return null
+            pool = inBand
+        }
+
+        // 4) en alttaki satır çekirdek alınır, yakınındakiler onunla birleştirilir
         val seed = pool.maxByOrNull { it.second.bottom } ?: return null
         val sh = seed.second.height().toFloat()
         val group = pool.filter { (_, b) ->
@@ -127,6 +135,33 @@ object Ocr {
         if (digits > t.length / 4) return true
         val symbols = t.count { !it.isLetterOrDigit() && !it.isWhitespace() && it !in ",.!?'\u2019-" }
         if (symbols > 3) return true
+        if (gibberish(t)) return true
         return false
+    }
+
+    /** Kısa, büyük harfli, sesli harfsiz kırıntılar arayüzden sızan yazılardır: "XRO G" gibi. */
+    private val COMMON = setOf(
+        "the", "and", "you", "but", "for", "not", "now", "get", "got", "out", "man", "hey", "yes",
+        "yeah", "no", "ok", "okay", "why", "who", "how", "all", "let", "she", "him", "her", "his",
+        "was", "are", "can", "did", "kid", "run", "gun", "one", "two", "try", "say", "see", "sir",
+        "yo", "hi", "oh", "ah", "eh", "uh", "mr", "ms", "dr", "god", "damn", "hell", "shit", "fuck",
+        "ass", "way", "day", "job", "car", "cop", "boy", "dad", "mom", "bro", "dog", "off", "put",
+        "set", "top", "bad", "big", "old", "new", "hot", "far", "low", "up", "in", "on", "at", "to",
+        "it", "is", "be", "do", "go", "we", "he", "me", "my", "so", "if", "as", "or", "an", "a", "i"
+    )
+
+    private fun gibberish(t: String): Boolean {
+        val tokens = t.split(Regex("\\s+")).filter { tk -> tk.any { it.isLetter() } }
+        if (tokens.size < 2) return false
+        val vowels = "aeiouyàáâäéèêëíìîïóòôöúùûüıöü"
+        var bad = 0
+        for (tk in tokens) {
+            val w = tk.filter { it.isLetter() }
+            val lw = w.lowercase()
+            if (w.length == 1 && lw != "a" && lw != "i" && lw != "o") { bad++; continue }
+            if (w.length >= 2 && w.none { vowels.contains(it.lowercaseChar()) }) { bad++; continue }
+            if (w.length <= 3 && w == w.uppercase() && !COMMON.contains(lw)) bad++
+        }
+        return bad * 100 / tokens.size >= 40
     }
 }

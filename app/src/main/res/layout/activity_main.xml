@@ -157,6 +157,29 @@
                 android:text="Çeviriyi altyazının üstüne yerleştir"
                 android:textColor="@color/txt" />
 
+            <TextView
+                android:id="@+id/tvScan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Taramanın başladığı yükseklik"
+                android:textColor="@color/muted"
+                android:textSize="13sp" />
+
+            <SeekBar
+                android:id="@+id/sbScan"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="65"
+                android:progress="42" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Altyazı daha yukarıda çıkıyorsa bu değeri küçült. Büyütmek, oynatıcı arayüzünün okunmasını engeller."
+                android:textColor="@color/muted"
+                android:textSize="12sp" />
+
             <Button
                 android:id="@+id/btnRegion"
                 android:layout_width="match_parent"
